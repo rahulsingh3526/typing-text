@@ -159,39 +159,35 @@ export default function TypingTest({ text, onComplete }: TypingTestProps) {
     };
   }, [updateStats, startTime, isComplete]);
 
-  const handleInput = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newInput = e.target.value;
-    if (!startTime) {
-      setStartTime(Date.now());
-    }
-    
-    // Calculate errors using joined text
-    const newErrors = newInput.split('').reduce((count, char, i) => (
-      count + (char !== joinedText[i] && joinedText[i] ? 1 : 0)
-    ), 0);
-
-    // Update total keystrokes (includes both correct and incorrect keystrokes)
-    setTotalKeystrokes(prev => prev + 1);
-    setErrors(newErrors);
+  const handleInput = (newInput: string) => {
+    if (!startTime) setStartTime(Date.now());
     setInput(newInput);
+    setCurrentWordIndex(newInput.split(' ').length - 1);
     
-    const currentWordCount = newInput.trim().split(' ').length;
-    setCurrentWordIndex(currentWordCount - 1);
-  }, [startTime, joinedText]);
+    // Check if typing is complete
+    if (newInput.length >= text.length) {
+      const timeInMinutes = (Date.now() - (startTime || Date.now())) / 60000;
+      const wordsTyped = newInput.trim().split(' ').length;
+      const wpm = Math.round(wordsTyped / timeInMinutes);
+      const accuracy = Math.round((newInput.split('').filter((char, i) => char === text[i]).length / text.length) * 100);
+      onComplete(wpm, accuracy);
+    }
+  };
 
   // Render the words with proper styling
   const renderedWords = words.map((word, index) => (
     <span
       key={index}
-      className={`mx-2 px-2 py-1 rounded ${
+      className={`inline-block px-4 py-2 rounded-lg transition-all duration-300 transform ${
         index < currentWordIndex
-          ? 'text-emerald-500'
+          ? 'text-pink-300 scale-95 translate-y-1 opacity-75'
           : index === currentWordIndex
-          ? 'bg-purple-100 text-purple-900'
-          : 'text-gray-700'
+          ? 'bg-purple-800/50 text-purple-200 scale-110 shadow-lg animate-pulse-subtle'
+          : 'text-purple-200 hover:bg-purple-800/30'
       }`}
     >
       {word}
+      {index < words.length - 1 ? ' ' : ''}
     </span>
   ));
 
@@ -235,56 +231,51 @@ export default function TypingTest({ text, onComplete }: TypingTestProps) {
       </div>
 
       {/* Text Display */}
-      <div className="p-6 bg-white/10 rounded-lg">
-        <div className="text-xl leading-relaxed">
-          {renderedWords}
+      <div className="p-6 bg-purple-900/30 backdrop-blur-sm rounded-lg shadow-xl border border-purple-500/20">
+        <div className="text-xl leading-relaxed tracking-wide font-mono whitespace-pre">
+          <div className="flex flex-wrap gap-4">
+            {renderedWords}
+          </div>
         </div>
       </div>
 
       {/* Input Area */}
-      <div className="relative animate-slide-up">
-        <textarea
-          className="w-full p-6 text-lg bg-purple-900/30 backdrop-blur-sm rounded-2xl border-2 border-purple-500/20 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent text-purple-100 shadow-xl transition-all duration-300 font-mono hover:shadow-2xl focus:shadow-2xl"
-          value={input}
-          onChange={handleInput}
-          placeholder="Start typing..."
-          disabled={isComplete}
-          rows={4}
-          autoFocus
-        />
-        {!startTime && !showCompletionMenu && (
-          <div className="absolute inset-0 flex items-center justify-center bg-purple-900/5 rounded-2xl backdrop-blur-sm">
-            <p className="text-lg font-medium text-purple-200 animate-bounce-subtle">
-              Click here to start typing
-            </p>
-          </div>
-        )}
-
-        {/* Completion Menu */}
-        {showCompletionMenu && (
-          <div className="absolute inset-0 flex items-center justify-center bg-purple-900/10 rounded-2xl backdrop-blur-sm animate-fade-scale">
-            <div className="flex gap-4 animate-slide-up">
-              <button
-                onClick={handleRetry}
-                className="px-6 py-3 bg-pink-500 hover:bg-pink-600 text-white rounded-xl shadow-lg transition-all duration-300 transform hover:scale-110 hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2 dark:focus:ring-offset-purple-900"
-              >
-                Try Again
-              </button>
-              <button
-                onClick={handleNewText}
-                className="px-6 py-3 bg-purple-500 hover:bg-purple-600 text-white rounded-xl shadow-lg transition-all duration-300 transform hover:scale-110 hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 dark:focus:ring-offset-purple-900"
-              >
-                New Text
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+      <textarea
+        className="w-full p-4 bg-purple-900/30 rounded-lg text-purple-100 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+        value={input}
+        onChange={(e) => handleInput(e.target.value)}
+        placeholder="Start typing..."
+      />
 
       {/* Virtual Keyboard */}
       <div className="mt-8">
-        <VirtualKeyboard onType={(key) => setInput(input + key)} />
+        <VirtualKeyboard onType={(key) => {
+          // Only handle space and return from virtual keyboard
+          if (key === ' ' || key === 'Return') {
+            handleInput(input + key);
+          }
+        }} />
       </div>
+
+      {/* Completion Menu */}
+      {showCompletionMenu && (
+        <div className="absolute inset-0 flex items-center justify-center bg-purple-900/10 rounded-2xl backdrop-blur-sm animate-fade-scale">
+          <div className="flex gap-4 animate-slide-up">
+            <button
+              onClick={handleRetry}
+              className="px-6 py-3 bg-pink-500 hover:bg-pink-600 text-white rounded-xl shadow-lg transition-all duration-300 transform hover:scale-110 hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2 dark:focus:ring-offset-purple-900"
+            >
+              Try Again
+            </button>
+            <button
+              onClick={handleNewText}
+              className="px-6 py-3 bg-purple-500 hover:bg-purple-600 text-white rounded-xl shadow-lg transition-all duration-300 transform hover:scale-110 hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 dark:focus:ring-offset-purple-900"
+            >
+              New Text
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Category Selection */}
       <div className="text-center space-y-6 animate-fade-in">

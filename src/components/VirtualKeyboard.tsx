@@ -71,7 +71,7 @@ export default function VirtualKeyboard({ onType }: VirtualKeyboardProps) {
             {row.map((key, keyIndex) => {
               let width = "w-10"
               let content = key
-              const keyString = typeof key === "string" ? key.toUpperCase() : (key as any).key
+              const keyString = typeof key === "string" ? key.toUpperCase() : (key as React.ReactElement).key
               const isActive = activeKey === keyString
               const isClicked = clickedKey === keyString
 

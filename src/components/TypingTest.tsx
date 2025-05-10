@@ -10,6 +10,7 @@ interface Score {
 }
 
 interface TypingTestProps {
+  text: string;
   onComplete: (wpm: number, accuracy: number) => void;
 }
 
@@ -25,7 +26,7 @@ const calculateAccuracy = (input: string, originalText: string, totalKeystrokes:
   return Math.round((correctChars / totalKeystrokes) * 100);
 };
 
-export default function TypingTest({ onComplete }: TypingTestProps) {
+export default function TypingTest({ text, onComplete }: TypingTestProps) {
   const [input, setInput] = useState('');
   const [startTime, setStartTime] = useState<number | null>(null);
   const [isComplete, setIsComplete] = useState(false);
@@ -38,7 +39,6 @@ export default function TypingTest({ onComplete }: TypingTestProps) {
   const [showCompletionMenu, setShowCompletionMenu] = useState(false);
   const [highScores, setHighScores] = useState<Score[]>([]);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
-  const [lastKeyPressed, setLastKeyPressed] = useState('');
   
   // Refs for performance optimization
   const statsUpdateTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
@@ -139,13 +139,13 @@ export default function TypingTest({ onComplete }: TypingTestProps) {
     const wordsTyped = input.trim().split(' ').length;
     
     const finalWpm = calculateWPM(wordsTyped, timeInMinutes);
-    const finalAccuracy = calculateAccuracy(input, joinedText, totalKeystrokes);
+    const finalAccuracy = calculateAccuracy(input, text, totalKeystrokes);
     
     setIsComplete(true);
     setShowCompletionMenu(true);
     onComplete(finalWpm, finalAccuracy);
     updateHighScores(finalWpm, finalAccuracy);
-  }, [startTime, isComplete, input, joinedText, totalKeystrokes, onComplete, updateHighScores]);
+  }, [startTime, isComplete, input, text, totalKeystrokes, onComplete, updateHighScores]);
 
   // Stats update effect
   useEffect(() => {
@@ -177,37 +177,23 @@ export default function TypingTest({ onComplete }: TypingTestProps) {
     
     const currentWordCount = newInput.trim().split(' ').length;
     setCurrentWordIndex(currentWordCount - 1);
-
-    // Update last key pressed
-    const lastChar = newInput.slice(-1);
-    setLastKeyPressed(lastChar);
   }, [startTime, joinedText]);
 
-  // Memoize the word display logic with proper spacing
-  const renderWords = useMemo(() => (
-    <div className="text-2xl leading-relaxed tracking-wide font-code whitespace-pre antialiased">
-      <div className="flex flex-wrap gap-8 px-6">
-        {words.map((word, index) => (
-          <div
-            key={index}
-            className="relative flex items-center group"
-          >
-            <span
-              className={`inline-block px-6 py-3 rounded-xl transition-all duration-300 transform ${
-                index < currentWordIndex
-                  ? 'text-emerald-500 dark:text-emerald-400 scale-95 translate-y-1 opacity-75'
-                  : index === currentWordIndex
-                  ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-200 scale-110 shadow-lg animate-pulse-subtle'
-                  : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/30'
-              }`}
-            >
-              {word}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  ), [words, currentWordIndex]);
+  // Render the words with proper styling
+  const renderedWords = words.map((word, index) => (
+    <span
+      key={index}
+      className={`mx-2 px-2 py-1 rounded ${
+        index < currentWordIndex
+          ? 'text-emerald-500'
+          : index === currentWordIndex
+          ? 'bg-purple-100 text-purple-900'
+          : 'text-gray-700'
+      }`}
+    >
+      {word}
+    </span>
+  ));
 
   return (
     <div className="min-h-screen w-full max-w-5xl mx-auto p-12 space-y-16 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-purple-900 via-fuchsia-900 to-pink-900 animate-gradient-shift">
@@ -249,29 +235,9 @@ export default function TypingTest({ onComplete }: TypingTestProps) {
       </div>
 
       {/* Text Display */}
-      <div className="relative p-16 bg-purple-900/30 backdrop-blur-sm rounded-2xl shadow-xl border border-purple-500/20 transition-all duration-300 hover:shadow-2xl animate-fade-in">
-        <div className="text-xl leading-relaxed tracking-wide font-mono whitespace-pre">
-          <div className="flex flex-wrap gap-6 px-4">
-            {words.map((word, index) => (
-              <div
-                key={index}
-                className="relative flex items-center group"
-              >
-                <span
-                  className={`inline-block px-4 py-2 rounded-lg transition-all duration-300 transform ${
-                    index < currentWordIndex
-                      ? 'text-pink-300 scale-95 translate-y-1 opacity-75'
-                      : index === currentWordIndex
-                      ? 'bg-purple-800/50 text-purple-200 scale-110 shadow-lg animate-pulse-subtle'
-                      : 'text-purple-200 hover:bg-purple-800/30'
-                  }`}
-                >
-                  {word}
-                  {index < words.length - 1 ? '  ' : ''}
-                </span>
-              </div>
-            ))}
-          </div>
+      <div className="p-6 bg-white/10 rounded-lg">
+        <div className="text-xl leading-relaxed">
+          {renderedWords}
         </div>
       </div>
 
@@ -317,7 +283,7 @@ export default function TypingTest({ onComplete }: TypingTestProps) {
 
       {/* Virtual Keyboard */}
       <div className="mt-8">
-        <VirtualKeyboard onType={(key) => setLastKeyPressed(key)} />
+        <VirtualKeyboard onType={(key) => setInput(input + key)} />
       </div>
 
       {/* Category Selection */}

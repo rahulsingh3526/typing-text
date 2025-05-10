@@ -5,8 +5,10 @@ import TypingTest from '@/components/TypingTest';
 import Results from '@/components/Results';
 import { generateText } from '@/utils/textGenerator';
 
+const initialText = generateText(); // Generate text once outside component
+
 export default function Home() {
-  const [text, setText] = useState(generateText);
+  const [text, setText] = useState(initialText);
   const [showResults, setShowResults] = useState(false);
   const [results, setResults] = useState({ wpm: 0, accuracy: 0 });
 
